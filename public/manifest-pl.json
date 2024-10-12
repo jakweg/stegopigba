@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "id": "stegopigba.wegrzyn.dev",
+  "name": "Stegopigba",
+  "short_name": "Stegopigba",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "start_url": ".",
+  "display": "standalone",
+  "description": "Ukrywanie danych w obrazie",
+  "icons": [
+    {
+      "src": "icon/512.png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon/512.png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icon/256.png",
+      "sizes": "256x256",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon/256.png",
+      "sizes": "256x256",
+      "purpose": "any"
+    },
+    {
+      "src": "icon/128.png",
+      "sizes": "128x128",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon/any.svg",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ]
+}

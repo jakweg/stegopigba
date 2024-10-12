@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "start": "esbuild --bundle src/index.ts --outfile=public/bundle.js --servedir=public",
+    "build:prod": "rm -rf dist && esbuild --bundle src/index.ts --outfile=dist/bundle.js --minify && minify public/index.html > dist/index.html && cp public/manifest*.json dist/ && cp -r public/icon dist/icon && workbox generateSW workbox-config.json"
+  },
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "esbuild": "^0.24.0",
+    "minify": "^11.4.1",
+    "workbox-cli": "^7.1.0"
+  }
+}
