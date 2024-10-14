@@ -1,3 +1,133 @@
-const who: string = 'World'
+import { ReadableBitStream, WritableBitStream } from './bit-stream'
+import { debounce, loadImage, readFileDataUrl } from './util'
 
-console.log(`Hello ${who}!`)
+const dataSizeSpan = document.getElementById('data-size') as HTMLSpanElement
+const imageCapacitySpan = document.getElementById('image-capacity') as HTMLSpanElement
+const capacityPercentageSpan = document.getElementById('capacity-percentage') as HTMLSpanElement
+const embedOnBitsSpan = document.getElementById('embed-on-bits') as HTMLSpanElement
+const embedOnBitsInput = document.getElementById('embed-bits-count') as HTMLInputElement
+const textDataInput = document.getElementById('text-to-embed') as HTMLInputElement
+const textFromImageInput = document.getElementById('text-from-image') as HTMLInputElement
+
+const imagePreviewCanvas = document.getElementById('image-preview') as HTMLCanvasElement
+const imagePreviewContext = imagePreviewCanvas.getContext('2d', {
+  alpha: true,
+  willReadFrequently: true,
+})
+
+let selectedMode: string
+let originalImage: HTMLImageElement
+let useBitsPerChannel: number = 1
+
+function refresh() {
+  useBitsPerChannel = Math.max(1, Math.min(7, +embedOnBitsInput.value | 0))
+  embedOnBitsSpan.textContent = `${useBitsPerChannel}`
+
+  const currentDataAsString = textDataInput.value
+
+  const encoder = new TextEncoder()
+  const currentDataAsBytes = encoder.encode(currentDataAsString)
+  dataSizeSpan.textContent = `${currentDataAsBytes.length * 8}`
+
+  if (originalImage) {
+    const maxCapacity = originalImage.width * originalImage.height * 3 * useBitsPerChannel
+    imageCapacitySpan.textContent = `${maxCapacity}`
+
+    capacityPercentageSpan.textContent = `${(((currentDataAsBytes.length * 8) / maxCapacity) * 100).toFixed(2)}`
+
+    if (selectedMode === 'write-text') {
+      imagePreviewCanvas.width = originalImage.width
+      imagePreviewCanvas.height = originalImage.height
+      imagePreviewContext.drawImage(originalImage, 0, 0)
+      const imageData = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
+        colorSpace: 'srgb',
+      })
+      const readStream = ReadableBitStream.createFromUint8Array(currentDataAsBytes)
+      const writeStream = WritableBitStream.createFromUint8Array(imageData.data)
+
+      writeStream.putByte((currentDataAsBytes.length >> 24) & 0xff)
+      writeStream.putByte((currentDataAsBytes.length >> 16) & 0xff)
+      writeStream.putByte((currentDataAsBytes.length >> 8) & 0xff)
+      writeStream.putByte((currentDataAsBytes.length >> 0) & 0xff)
+
+      while (true) {
+        if (readStream.isOver() || writeStream.isOver()) break
+
+        writeStream.skipNextBits(8 - useBitsPerChannel)
+        for (let i = 0; i < useBitsPerChannel; ++i) {
+          writeStream.putBit(readStream.getNextBit())
+        }
+      }
+
+      imagePreviewContext.putImageData(imageData, 0, 0)
+      const imageData2 = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
+        colorSpace: 'srgb',
+      })
+    } else if (selectedMode === 'read-text') {
+      imagePreviewCanvas.width = originalImage.width
+      imagePreviewCanvas.height = originalImage.height
+      imagePreviewContext.drawImage(originalImage, 0, 0)
+      const imageData = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
+        colorSpace: 'srgb',
+      })
+      const readStream = ReadableBitStream.createFromUint8Array(imageData.data)
+      const length =
+        (readStream.getNextByte() << 24) |
+        (readStream.getNextByte() << 16) |
+        (readStream.getNextByte() << 8) |
+        (readStream.getNextByte() << 0)
+
+      const bytes = new Uint8Array(length)
+      const writeStream = WritableBitStream.createFromUint8Array(bytes)
+      while (!writeStream.isOver()) {
+        readStream.skipNextBits(8 - useBitsPerChannel)
+        for (let i = 0; i < useBitsPerChannel; ++i) {
+          const bit = readStream.getNextBit()
+          writeStream.putBit(bit)
+        }
+      }
+
+      const decoder = new TextDecoder()
+      const decodedAsText = decoder.decode(bytes)
+      textFromImageInput.value = decodedAsText
+    }
+  }
+}
+
+;(document.getElementById('embed-in-file') as HTMLInputElement).addEventListener('change', async event => {
+  const file = (event.target as HTMLInputElement).files[0]
+  if (!file) return
+  const dataUrl = await readFileDataUrl(file)
+  const img = await loadImage(dataUrl)
+
+  originalImage = img
+
+  refresh()
+})
+
+embedOnBitsInput.addEventListener('change', refresh)
+embedOnBitsInput.addEventListener('input', refresh)
+textDataInput.addEventListener('change', refresh)
+textDataInput.addEventListener('input', debounce(refresh, 300))
+
+for (const btn of document.getElementsByClassName('download-png-btn')) {
+  ;(btn as HTMLInputElement).addEventListener('click', () => {
+    const dataUrl = imagePreviewCanvas.toDataURL('image/png')
+    const link = document.createElement('a')
+    link.download = 'with-embeded.png'
+    link.href = dataUrl
+    link.click()
+  })
+}
+
+for (const input of document.getElementsByName('mode')) {
+  ;(input as HTMLInputElement).addEventListener('change', () => {
+    selectedMode = (input as HTMLInputElement).value
+
+    document.querySelectorAll(`[id*=operation]`).forEach(e => ((e as HTMLElement).style.display = 'none'))
+    document.getElementById(`operation-${selectedMode}`).style.display = ''
+    refresh()
+  })
+}
+
+refresh()

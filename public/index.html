@@ -9,19 +9,69 @@
     <link rel="manifest" href="manifest-pl.json">
     <style>
       :root {
-        background: black;
+        background: rgb(6, 1, 52);
       }
       body {
+        margin: 0;
         color-scheme: light dark;
         color: #ccc;
-        display: grid;
         -webkit-tap-highlight-color: transparent;
         font-family: "Roboto Light", monospace;
+        display: grid;
+        grid-template-columns: 60vw 1fr;
+      }
+
+      canvas {
+        image-rendering: pixelated;
+        box-sizing: border-box;
+        margin: 16px;
+        max-width: calc(100% - 32px);
+        max-height: 90vh;
+        border-radius: 8px;
+        border: 2px solid green;
+      }
+
+      label {
+        display: block;
       }
     </style>
   </head>
   <body>
-    <h1>Hello world</h1>
+    <main>
+      <canvas id="image-preview"></canvas>
+    </main>
+    <aside>
+      <section>
+        <h2>Image to work on:</h2>
+        <input type="file" id="embed-in-file">
+      </section>
+      
+      <section>
+        <h2>Mode:</h2>
+        <label><input type=radio name=mode value=read-text>Read text from the image</label>
+        <label><input type=radio name=mode value=write-text>Write text to the image</label>
+      </section>
+
+      <section>
+        <label>Embed on bits: <span id="embed-on-bits">1</span><input type="range" value=1 min=1 max=7 id="embed-bits-count"></label>
+      </section>
+
+      <section id="operation-write-text" style="display: none;">
+        <h2>Data to embed:</h2>
+        <label><input type="text" id="text-to-embed"></label>
+        <p>Current image holds up to <span id="image-capacity">?</span> bits</p>
+        <p>Current data takes <span id="data-size">?</span> bits</p>
+        <p>Which is <span id="capacity-percentage">?</span>%</p>
+        <input type="button" value="Download png" class="download-png-btn">
+      </section>
+      
+
+      <section id="operation-read-text" style="display: none;">
+        <h2>Detected text:</h2>
+        <label><input readonly type="text" id="text-from-image"></label>
+      </section>
+      
+    </aside>
   </body>
   <script src="bundle.js" async></script>
 </html>
