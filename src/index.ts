@@ -79,7 +79,8 @@ function refresh() {
 
       const bytes = new Uint8Array(length)
       const writeStream = WritableBitStream.createFromUint8Array(bytes)
-      while (!writeStream.isOver()) {
+      while (true) {
+        if (writeStream.isOver()) break
         readStream.skipNextBits(8 - useBitsPerChannel)
         for (let i = 0; i < useBitsPerChannel; ++i) {
           const bit = readStream.getNextBit()
