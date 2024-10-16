@@ -1,3 +1,4 @@
+import { sliceBytesIntoZeroSeparatedBits } from './bit-magic'
 import { ReadableBitStream, WritableBitStream } from './bit-stream'
 import { debounce, loadImage, readFileDataUrl } from './util'
 
@@ -42,9 +43,8 @@ function refresh() {
       const imageData = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
         colorSpace: 'srgb',
       })
-      const readStream = ReadableBitStream.createFromUint8Array(currentDataAsBytes)
-      const writeStream = WritableBitStream.createFromUint8Array(imageData.data)
-
+      const readStream = ReadableBitStream.createFromUint8Array(currentDataAsBytes, false)
+      const writeStream = WritableBitStream.createFromUint8Array(imageData.data, true)
       writeStream.putByte((currentDataAsBytes.length >> 24) & 0xff)
       writeStream.putByte((currentDataAsBytes.length >> 16) & 0xff)
       writeStream.putByte((currentDataAsBytes.length >> 8) & 0xff)
@@ -60,9 +60,6 @@ function refresh() {
       }
 
       imagePreviewContext.putImageData(imageData, 0, 0)
-      const imageData2 = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
-        colorSpace: 'srgb',
-      })
     } else if (selectedMode === 'read-text') {
       imagePreviewCanvas.width = originalImage.width
       imagePreviewCanvas.height = originalImage.height
@@ -70,15 +67,16 @@ function refresh() {
       const imageData = imagePreviewContext.getImageData(0, 0, imagePreviewCanvas.width, imagePreviewCanvas.height, {
         colorSpace: 'srgb',
       })
-      const readStream = ReadableBitStream.createFromUint8Array(imageData.data)
+      const readStream = ReadableBitStream.createFromUint8Array(imageData.data, true)
       const length =
         (readStream.getNextByte() << 24) |
         (readStream.getNextByte() << 16) |
         (readStream.getNextByte() << 8) |
         (readStream.getNextByte() << 0)
 
+      if (length < 0 || length > 1_000_000) throw new Error('Attempt to create array of length ' + length + 'b')
       const bytes = new Uint8Array(length)
-      const writeStream = WritableBitStream.createFromUint8Array(bytes)
+      const writeStream = WritableBitStream.createFromUint8Array(bytes, false)
       while (true) {
         if (writeStream.isOver()) break
         readStream.skipNextBits(8 - useBitsPerChannel)
@@ -88,9 +86,15 @@ function refresh() {
         }
       }
 
-      const decoder = new TextDecoder()
-      const decodedAsText = decoder.decode(bytes)
-      textFromImageInput.value = decodedAsText
+      const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+      try {
+        const decodedAsText = decoder.decode(bytes)
+        textFromImageInput.value = decodedAsText
+        textFromImageInput.style.color = ''
+      } catch (_) {
+        textFromImageInput.value = 'Unable to decode'
+        textFromImageInput.style.color = 'red'
+      }
     }
   }
 }
@@ -109,7 +113,8 @@ function refresh() {
 embedOnBitsInput.addEventListener('change', refresh)
 embedOnBitsInput.addEventListener('input', refresh)
 textDataInput.addEventListener('change', refresh)
-textDataInput.addEventListener('input', debounce(refresh, 300))
+// commented cos causes lag
+// textDataInput.addEventListener('input', debounce(refresh, 300))
 
 for (const btn of document.getElementsByClassName('download-png-btn')) {
   ;(btn as HTMLInputElement).addEventListener('click', () => {
