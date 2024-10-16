@@ -1,4 +1,5 @@
 import { sliceBytesIntoZeroSeparatedBits } from './bit-magic'
+import { PixelSkipper } from './pixel-skipper'
 import { ReadableBitStream, WritableBitStream } from './bit-stream'
 import { debounce, loadImage, readFileDataUrl } from './util'
 
@@ -21,7 +22,10 @@ let originalImage: HTMLImageElement
 let useBitsPerChannel: number = 1
 
 function refresh() {
-  useBitsPerChannel = Math.max(1, Math.min(7, +embedOnBitsInput.value | 0))
+  imagePreviewCanvas.width = 0
+  imagePreviewCanvas.height = 0
+
+  useBitsPerChannel = Math.max(1, Math.min(8, +embedOnBitsInput.value | 0))
   embedOnBitsSpan.textContent = `${useBitsPerChannel}`
 
   const currentDataAsString = textDataInput.value
@@ -50,12 +54,24 @@ function refresh() {
       writeStream.putByte((currentDataAsBytes.length >> 8) & 0xff)
       writeStream.putByte((currentDataAsBytes.length >> 0) & 0xff)
 
+      const randomSeed = ((Math.random() * 255) | 0) & 0xff
+      writeStream.putByte(randomSeed)
+      const skipper = new PixelSkipper(
+        randomSeed,
+        (currentDataAsBytes.length * 8) / useBitsPerChannel,
+        maxCapacity / useBitsPerChannel,
+      )
+
       while (true) {
         if (readStream.isOver() || writeStream.isOver()) break
 
         writeStream.skipNextBits(8 - useBitsPerChannel)
-        for (let i = 0; i < useBitsPerChannel; ++i) {
-          writeStream.putBit(readStream.getNextBit())
+        if (skipper.getNextShouldSkip()) {
+          writeStream.skipNextBits(useBitsPerChannel)
+        } else {
+          for (let i = 0; i < useBitsPerChannel; ++i) {
+            writeStream.putBit(readStream.getNextBit())
+          }
         }
       }
 
@@ -74,15 +90,25 @@ function refresh() {
         (readStream.getNextByte() << 8) |
         (readStream.getNextByte() << 0)
 
+      const skipper = new PixelSkipper(
+        readStream.getNextByte(),
+        (length * 8) / useBitsPerChannel,
+        imageData.width * imageData.height * 3,
+      )
+
       if (length < 0 || length > 1_000_000) throw new Error('Attempt to create array of length ' + length + 'b')
       const bytes = new Uint8Array(length)
       const writeStream = WritableBitStream.createFromUint8Array(bytes, false)
       while (true) {
         if (writeStream.isOver()) break
         readStream.skipNextBits(8 - useBitsPerChannel)
-        for (let i = 0; i < useBitsPerChannel; ++i) {
-          const bit = readStream.getNextBit()
-          writeStream.putBit(bit)
+        if (skipper.getNextShouldSkip()) {
+          readStream.skipNextBits(useBitsPerChannel)
+        } else {
+          for (let i = 0; i < useBitsPerChannel; ++i) {
+            const bit = readStream.getNextBit()
+            writeStream.putBit(bit)
+          }
         }
       }
 

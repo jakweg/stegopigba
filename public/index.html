@@ -34,6 +34,10 @@
       label {
         display: block;
       }
+      textarea {
+        resize: none;
+        width: 90%;
+      }
     </style>
   </head>
   <body>
@@ -53,12 +57,12 @@
       </section>
 
       <section>
-        <label>Embed on bits: <span id="embed-on-bits">1</span><input type="range" value=1 min=1 max=7 id="embed-bits-count"></label>
+        <label>Embed on bits: <span id="embed-on-bits">1</span><input type="range" value=1 min=1 max=8 id="embed-bits-count"></label>
       </section>
 
       <section id="operation-write-text" style="display: none;">
         <h2>Data to embed:</h2>
-        <label><input type="text" id="text-to-embed"></label>
+        <label><textarea type="text" id="text-to-embed" rows="10"></textarea></label>
         <p>Current image holds up to <span id="image-capacity">?</span> bits</p>
         <p>Current data takes <span id="data-size">?</span> bits</p>
         <p>Which is <span id="capacity-percentage">?</span>%</p>
@@ -68,7 +72,7 @@
 
       <section id="operation-read-text" style="display: none;">
         <h2>Detected text:</h2>
-        <label><input readonly type="text" id="text-from-image"></label>
+        <label><textarea readonly id="text-from-image" rows="10"></textarea></label>
       </section>
       
     </aside>
