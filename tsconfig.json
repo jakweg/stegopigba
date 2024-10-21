@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "ESNext"
+    "jsx": "react",
+    "module": "NodeNext",
+    "target": "ESNext",
+    "strictNullChecks": true,
   },
   "exclude": ["node_modules"]
 }

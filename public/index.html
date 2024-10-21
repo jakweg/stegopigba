@@ -21,6 +21,10 @@
         grid-template-columns: 60vw 1fr;
       }
 
+      #root {
+        display: contents;
+      }
+
       canvas {
         image-rendering: pixelated;
         box-sizing: border-box;
@@ -38,44 +42,13 @@
         resize: none;
         width: 90%;
       }
+      textarea.hasError {
+        color: red;
+      }
     </style>
   </head>
   <body>
-    <main>
-      <canvas id="image-preview"></canvas>
-    </main>
-    <aside>
-      <section>
-        <h2>Image to work on:</h2>
-        <input type="file" id="embed-in-file">
-      </section>
-      
-      <section>
-        <h2>Mode:</h2>
-        <label><input type=radio name=mode value=read-text>Read text from the image</label>
-        <label><input type=radio name=mode value=write-text>Write text to the image</label>
-      </section>
-
-      <section>
-        <label>Embed on bits: <span id="embed-on-bits">1</span><input type="range" value=1 min=1 max=8 id="embed-bits-count"></label>
-      </section>
-
-      <section id="operation-write-text" style="display: none;">
-        <h2>Data to embed:</h2>
-        <label><textarea type="text" id="text-to-embed" rows="10"></textarea></label>
-        <p>Current image holds up to <span id="image-capacity">?</span> bits</p>
-        <p>Current data takes <span id="data-size">?</span> bits</p>
-        <p>Which is <span id="capacity-percentage">?</span>%</p>
-        <input type="button" value="Download png" class="download-png-btn">
-      </section>
-      
-
-      <section id="operation-read-text" style="display: none;">
-        <h2>Detected text:</h2>
-        <label><textarea readonly id="text-from-image" rows="10"></textarea></label>
-      </section>
-      
-    </aside>
+    <div id="root"></div>
   </body>
   <script src="bundle.js" async></script>
 </html>

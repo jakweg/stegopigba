@@ -21,7 +21,7 @@ export class PixelSkipper {
       const actualBlockSize = Math.min(BLOCK_SIZE, this.capacityPixelSize - this.usedBitsCounter)
       const usedPixelsPerBlock = Math.ceil(useRatio * actualBlockSize)
 
-      const usedIndexes = []
+      const usedIndexes: number[] = []
       const availableIndexes = new Array(actualBlockSize)
       for (let i = 0; i < actualBlockSize; ++i) availableIndexes[i] = i
 

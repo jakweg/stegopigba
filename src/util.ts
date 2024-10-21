@@ -37,11 +37,19 @@ export function loadImage(url: string) {
 }
 
 export function debounce(internal: () => void, ms: number) {
-  let timeoutId
+  let timeoutId: ReturnType<typeof setTimeout>
   return () => {
     clearTimeout(timeoutId)
     timeoutId = setTimeout(() => {
       internal()
     }, ms)
   }
+}
+
+export function downloadCanvasToPng(canvas: HTMLCanvasElement, name: string) {
+  const dataUrl = canvas.toDataURL('image/png')
+  const link = document.createElement('a')
+  link.download = name
+  link.href = dataUrl
+  link.click()
 }
