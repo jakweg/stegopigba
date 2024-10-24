@@ -14,6 +14,7 @@ export default {
         calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number {
           return imageWidth * imageHeight * 3 * bitsPerChannelCount
         },
+
         doWrite(image: ImageData, data: Uint8Array): void {
           const maxCapacity = image.width * image.height * 3 * bitsPerChannelCount
 
@@ -60,7 +61,7 @@ export default {
             image.width * image.height * 3,
           )
 
-          if (length < 0 || length > 1_000_000) throw new Error('Attempt to create array of length ' + length + 'b')
+          if (length < 0) throw new Error('Attempt to create array of length ' + length + 'b')
           const bytes = new Uint8Array(length)
           const writeStream = WritableBitStream.createFromUint8Array(bytes, false)
           while (true) {
