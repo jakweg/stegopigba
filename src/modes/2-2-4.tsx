@@ -13,23 +13,30 @@ export default {
         calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number {
           return imageWidth * imageHeight * (2 + 2 + 4)
         },
-        doWrite(image: ImageData, data: Uint8Array): void {
-          setIsLoading(true);
-          const maxCapacity = image.width * image.height * (2 + 2 + 4)
-          if (data.length * 8 > maxCapacity) {
-            throw new Error('You want to encode too much data in this photo.');
-          }
-          
-          const readStream = ReadableBitStream.createFromUint8Array(data, false)
-          const writeStream = WritableBitStream.createFromUint8Array(image.data, true)
-          
-          writeStream.putByte((data.length >> 24) & 0xff)
-          writeStream.putByte((data.length >> 16) & 0xff)
-          writeStream.putByte((data.length >> 8) & 0xff)
-          writeStream.putByte((data.length >> 0) & 0xff)
+        doWrite(image: ImageData, data: Array<Uint8Array>): void {
+            if (data.length >= 6) {
+                throw new Error('You want to encode too much texts in this photo. (maximum number is 6');
+            }
 
 
-          while (true) {
+            setIsLoading(true);
+            const maxCapacity = image.width * image.height * (2 + 2 + 4)
+            const totalBitsNeeded = data.reduce((sum, currentData) => sum + (currentData.length * 8), 0)
+            if (totalBitsNeeded > maxCapacity) {
+                throw new Error('You want to encode too much data in this photo.');
+            }
+            const readStreams = data.map(d => ReadableBitStream.createFromUint8Array(d, false))
+            const writeStream = WritableBitStream.createFromUint8Array(image.data, true)
+
+            data.forEach(d => {
+                writeStream.putByte((d.length >> 24) & 0xff);
+                writeStream.putByte((d.length >> 16) & 0xff);
+                writeStream.putByte((d.length >> 8) & 0xff);
+                writeStream.putByte((d.length >> 0) & 0xff);
+              });
+            // need to decide how it should be divided into writeStream (RGB (8 bits from message) or every color should have differnt something from given message)
+
+            while (true) {
             if (readStream.isOver() || writeStream.isOver()) break
             
             writeStream.skipNextBits(8 - 2)
@@ -44,7 +51,7 @@ export default {
             for (let i = 0; i < 4; ++i){
                 writeStream.putBit(readStream.getNextBit())
             }
-          }
+        }
           setIsLoading(false)
         },
 
