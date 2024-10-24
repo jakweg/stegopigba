@@ -56,7 +56,7 @@ export default () => {
         try {
           const result = executorHandle.current?.doRead(imageData)
           if (result === 'failed') throw new Error('Failed to read data from image')
-
+          currentDataSizeBytes = result.length
           const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
           const decodedText = decoder.decode(result)
           setTextInput(decodedText)
@@ -66,12 +66,17 @@ export default () => {
           setHasError(true)
         }
       } else {
-        const encoder = new TextEncoder()
-        const currentDataAsBytes = encoder.encode(textInput)
-        currentDataSizeBytes = currentDataAsBytes.length
-
-        executorHandle.current?.doWrite(imageData, currentDataAsBytes)
-        contextInstance.putImageData(imageData, 0, 0)
+        try {
+          const encoder = new TextEncoder()
+          const currentDataAsBytes = encoder.encode(textInput)
+          currentDataSizeBytes = currentDataAsBytes.length
+          executorHandle.current?.doWrite(imageData, currentDataAsBytes)
+          contextInstance.putImageData(imageData, 0, 0)
+        } catch (e) {
+          console.error('Failed to write data to image', e)
+          setTextInput('Failed to write data to image')
+          setHasError(true)
+        }
       }
 
       setStorageText(
