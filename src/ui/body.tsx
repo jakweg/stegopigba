@@ -4,6 +4,7 @@ import allModes from '../modes/all-modes'
 import { ExecutionHandle } from '../modes/template'
 import ModePicker from './mode-picker'
 import { downloadCanvasToPng } from '../util'
+import MessageInputs from './message-input'
 
 export default () => {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -13,12 +14,16 @@ export default () => {
   const [isReadMode, setReadMode] = useState(false)
   const [wantsToRefresh, setWantsToRefresh] = useState(false)
   const [storageText, setStorageText] = useState('?')
-  const [textInput, setTextInput] = useState('')
+  // const [textInput, setTextInput] = useState('')
+  const [messages, setMessages] = useState([]);
+  const [singleMessage, setSingleMessage] = useState('');
   const [originalImage, setOriginalFile] = useState<HTMLImageElement | null>(null)
   const [selectedModeIndex, setSelectedModeIndex] = useState(-1)
   const [hasError, setHasError] = useState(false)
+  const [isMultiMessageMode, setIsMultiMessageMode] = useState(false);
 
   const ModeComponent = allModes[selectedModeIndex]
+
 
   const requestRefresh = useCallback(() => {
     setWantsToRefresh(true)
@@ -29,7 +34,10 @@ export default () => {
 
     setWantsToRefresh(value => {
       if (!value) return false
-
+      if (isMultiMessageMode){
+        console.log("messages to be written to image", messages);
+        return false
+      }
       setStorageText('?')
       const canvasInstance = canvas.current
       if (!canvasInstance) return false
@@ -59,22 +67,22 @@ export default () => {
           currentDataSizeBytes = result.length
           const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
           const decodedText = decoder.decode(result)
-          setTextInput(decodedText)
+          setSingleMessage(decodedText)
         } catch (e) {
           console.error('Failed to get data from image', e)
-          setTextInput('Failed to read from image')
+          setSingleMessage('Failed to read from image')
           setHasError(true)
         }
       } else {
         try {
           const encoder = new TextEncoder()
-          const currentDataAsBytes = encoder.encode(textInput)
+          const currentDataAsBytes = encoder.encode(singleMessage)
           currentDataSizeBytes = currentDataAsBytes.length
           executorHandle.current?.doWrite(imageData, currentDataAsBytes)
           contextInstance.putImageData(imageData, 0, 0)
         } catch (e) {
           console.error('Failed to write data to image', e)
-          setTextInput('Failed to write data to image')
+          setSingleMessage('Failed to write data to image')
           setHasError(true)
         }
       }
@@ -87,7 +95,7 @@ export default () => {
       )
       return false
     })
-  }, [wantsToRefresh, selectedModeIndex, textInput])
+  }, [wantsToRefresh, selectedModeIndex, singleMessage])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {
@@ -120,7 +128,7 @@ export default () => {
             checked={isReadMode}
             onChange={e => {
               setReadMode(e.target.checked)
-              setTextInput('')
+              setSingleMessage('')
               requestRefresh()
             }}
           />
@@ -134,6 +142,9 @@ export default () => {
           onChange={i => {
             setSelectedModeIndex(i)
             requestRefresh()
+            console.log("mode", ModeComponent.label);
+            // it should be oposit way?
+            ModeComponent.label === "2-2-4 LSB" ? setIsMultiMessageMode(false) : setIsMultiMessageMode(true)
           }}
         />
 
@@ -145,7 +156,17 @@ export default () => {
           />
         )}
 
-        <section>
+        <MessageInputs
+          isReadMode={isReadMode}
+          requestRefresh={requestRefresh}
+          isMultiMessageMode={isMultiMessageMode}
+          onMessagesChange={setMessages}
+          onSingleMessageChange={setSingleMessage}
+          singleMessage={singleMessage}
+          messages={messages}
+        />
+
+        {/* <section>
           <textarea
             className={hasError ? 'hasError' : undefined}
             readOnly={isReadMode}
@@ -156,7 +177,7 @@ export default () => {
               requestRefresh()
             }}
           />
-        </section>
+        </section> */}
 
         <button onClick={downloadImage}>Download image</button>
       </aside>
