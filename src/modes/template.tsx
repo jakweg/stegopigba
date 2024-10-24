@@ -3,7 +3,7 @@ import { RefObject } from 'react'
 export type ReadResult = 'failed' | Uint8Array
 
 export interface ExecutionHandle {
-  doWrite(image: ImageData, data: Uint8Array): void
+  doWrite(image: ImageData, data: Uint8Array | Array<Uint8Array>): void
 
   doRead(image: ImageData): ReadResult
 
