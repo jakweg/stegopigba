@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from 'react'
+=======
+import React from 'react'
+>>>>>>> 4600443d2ee2144a922958ff260eb254ac8d92af
 
 interface MessageInputsProps {
   isReadMode: boolean
@@ -19,6 +23,7 @@ export default function MessageInputs({
   singleMessage = '',
   messages = [],
 }: MessageInputsProps) {
+<<<<<<< HEAD
   // const [localMessages, setLocalMessages] = useState<string[]>(Array(6).fill(''));
   // const [localSingleMessage, setLocalSingleMessage] = useState<string>('');
 
@@ -69,6 +74,8 @@ export default function MessageInputs({
   //   requestRefresh();
   // };
 
+=======
+>>>>>>> 4600443d2ee2144a922958ff260eb254ac8d92af
   const handleMultipleInputChange = (index: number, newValue: string) => {
     const newMessages = [...messages]
     newMessages[index] = newValue
@@ -87,7 +94,6 @@ export default function MessageInputs({
         messages.map((message, index) => (
           <textarea
             key={index}
-            className={isReadMode ? 'readOnly' : undefined}
             readOnly={isReadMode}
             cols={10}
             value={message}
@@ -97,7 +103,6 @@ export default function MessageInputs({
         ))
       ) : (
         <textarea
-          className={isReadMode ? 'readOnly' : undefined}
           readOnly={isReadMode}
           cols={40}
           value={singleMessage}

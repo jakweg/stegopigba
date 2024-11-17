@@ -1,12 +1,12 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { PixelSkipper } from '../pixel-skipper'
 import { calculatePSNR } from '../util'
 
 export default {
   label: '2-2-4 LSB',
-  OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
+  supportedInput: '6-text',
+  OptionsComponent: ({ isReadMode, executor }) => {
     const [isLoading, setIsLoading] = useState(false)
     useImperativeHandle(executor, () => ({
       calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number {
@@ -17,7 +17,6 @@ export default {
           throw new Error('You want to encode too much texts in this photo. (maximum number is 6')
         }
 
-        setIsLoading(true)
         const maxCapacity = image.width * image.height * (2 + 2 + 4)
         const totalBitsNeeded = data.reduce((sum, currentData) => sum + currentData.length * 8, 0)
         if (totalBitsNeeded > maxCapacity) {
@@ -32,6 +31,7 @@ export default {
           writeStream.putByte((d.length >> 8) & 0xff)
           writeStream.putByte((d.length >> 0) & 0xff)
         })
+        // need to decide how it should be divided into writeStream (RGB (8 bits from message) or every color should have differnt something from given message)
 
         const bitsToWrite = [2, 2, 4]
         let howManyBits = 0
@@ -39,22 +39,20 @@ export default {
           const hasMoreData = readStreams.some(stream => !stream.isOver())
           if (!hasMoreData || writeStream.isOver()) break
           for (let i = 0; i < readStreams.length; i++) {
-            const stream = readStreams[i]
+            const stream = readStreams[i]!
             if (stream.isOver()) {
               continue
             }
-            writeStream.skipNextBits(8 - bitsToWrite[howManyBits])
-            for (let j = 0; j < bitsToWrite[howManyBits]; j++) {
+            writeStream.skipNextBits(8 - bitsToWrite[howManyBits]!)
+            for (let j = 0; j < bitsToWrite[howManyBits]!; j++) {
               writeStream.putBit(stream.getNextBit())
             }
             howManyBits = (howManyBits + 1) % 3
           }
         }
-        setIsLoading(false)
       },
 
       doRead(image: ImageData): ReadResult {
-        setIsLoading(true)
         const readStream = ReadableBitStream.createFromUint8Array(image.data, true)
 
         const streamLengths: number[] = []
@@ -78,12 +76,12 @@ export default {
 
         while (writableStreams.some(stream => !stream.isOver())) {
           for (let i = 0; i < writableStreams.length; i++) {
-            const stream = writableStreams[i]
+            const stream = writableStreams[i]!
             if (stream.isOver()) {
               continue
             }
-            readStream.skipNextBits(8 - bitsToRead[howManyBits])
-            for (let j = 0; j < bitsToRead[howManyBits]; j++) {
+            readStream.skipNextBits(8 - bitsToRead[howManyBits]!)
+            for (let j = 0; j < bitsToRead[howManyBits]!; j++) {
               const bit = readStream.getNextBit()
               stream.putBit(bit)
             }
@@ -111,7 +109,6 @@ export default {
         //     writeStream.putBit(bit)
         //   }
         // }
-        setIsLoading(false)
         return writableStreams.map(stream => stream.toUint8Array())
       },
       calculatePSNR(originalImage: ImageData, encodedImage: ImageData): number {
@@ -121,11 +118,7 @@ export default {
 
     return (
       <section>
-        {isLoading ? (
-          <label>Loading...</label>
-        ) : (
-          <label>{isReadMode ? 'Decoding 2-2-4 method' : 'Encoding 2-2-4 method'}</label>
-        )}
+        <label>{isReadMode ? 'Decoding 2-2-4 method' : 'Encoding 2-2-4 method'}</label>
       </section>
     )
   },

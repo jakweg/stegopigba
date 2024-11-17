@@ -34,8 +34,8 @@ export default () => {
     if (!wantsToRefresh) return
 
     setWantsToRefresh(value => {
-      if (!value) return false
-      if (isMultiMessageMode) {
+      if (!value || !ModeComponent) return false
+      if (ModeComponent.supportedInput === '6-text') {
         console.log('messages to be written to image', messages)
       } else {
         console.log('message to be written to image', singleMessage)
@@ -95,7 +95,7 @@ export default () => {
       } else {
         try {
           const encoder = new TextEncoder()
-          if (isMultiMessageMode) {
+          if (ModeComponent.supportedInput === '6-text') {
             const encodedMessages = messages.map(message => encoder.encode(message))
             executorHandle.current?.doWrite(imageData, encodedMessages)
             encodedMessages.forEach(message => (currentDataSizeBytes = currentDataSizeBytes + message.length))
@@ -106,11 +106,9 @@ export default () => {
           }
           if (executorHandle.current?.calculatePSNR) {
             const psnr = executorHandle.current.calculatePSNR(originalImageData, imageData)
-            console.log(`PSNR: ${psnr.toFixed(2)} dB`)
-            setPsnrValue(psnr)
+            console.info(`PSNR: ${psnr.toFixed(2)} dB`)
           } else {
-            console.log('calculatePSNR is not implemented.')
-            setPsnrValue(null)
+            console.warn('calculatePSNR is not implemented.')
           }
 
           // const encoder = new TextEncoder()
@@ -137,7 +135,7 @@ export default () => {
       )
       return false
     })
-  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages])
+  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages, ModeComponent])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {
@@ -186,9 +184,6 @@ export default () => {
         <ModePicker
           onChange={i => {
             setSelectedModeIndex(i)
-            console.log('mode', ModeComponent.label)
-            // it should be oposit way?
-            ModeComponent.label === '2-2-4 LSB' ? setIsMultiMessageMode(true) : setIsMultiMessageMode(false)
             requestRefresh()
           }}
         />
@@ -204,25 +199,12 @@ export default () => {
         <MessageInputs
           isReadMode={isReadMode}
           requestRefresh={requestRefresh}
-          isMultiMessageMode={isMultiMessageMode}
+          isMultiMessageMode={ModeComponent?.supportedInput === '6-text'}
           onMessagesChange={setMessages}
           onSingleMessageChange={setSingleMessage}
           singleMessage={singleMessage}
           messages={messages}
         />
-
-        {/* <section>
-          <textarea
-            className={hasError ? 'hasError' : undefined}
-            readOnly={isReadMode}
-            cols={10}
-            value={textInput}
-            onChange={e => {
-              setTextInput(e.target.value)
-              requestRefresh()
-            }}
-          />
-        </section> */}
 
         <button onClick={downloadImage}>Download image</button>
       </aside>
