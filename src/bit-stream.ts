@@ -101,6 +101,15 @@ export class WritableBitStream {
     return this.lastWritePosition >= this.array.length * 8
   }
 
+
+  public getLastWritePosition(): number {
+    return this.lastWritePosition
+  }
+
+  public getArray(): Uint8Array {
+    return this.array;
+  }
+
   public toUint8Array(): Uint8Array {
     return this.array;
   }
