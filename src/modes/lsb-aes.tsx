@@ -29,6 +29,7 @@ function decryptAES(encryptedMessage, key, iv) {
 }
 
 export default {
+  supportedInput: "single-text",
   label: 'AES LSB',
   OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
     const [bitsPerChannelCount, setBitsPerChannelCount] = useState(1)
