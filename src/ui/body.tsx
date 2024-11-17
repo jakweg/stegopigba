@@ -14,7 +14,7 @@ export default () => {
 
   const executorHandle = useRef<ExecutionHandle>(null)
   const [isReadMode, setReadMode] = useState(false)
-  const [wantsToRefresh, setWantsToRefresh] = useState(false)
+  const wantsToRefresh = useRef(false)
   const [storageText, setStorageText] = useState('?')
   const [messages, setMessages] = useState<string[]>(Array(6).fill(''))
   const [singleMessage, setSingleMessage] = useState('')
@@ -27,14 +27,15 @@ export default () => {
   const ModeComponent = allModes[selectedModeIndex]
 
   const requestRefresh = useCallback(() => {
-    setWantsToRefresh(true)
+    wantsToRefresh.current = true
   }, [])
 
   useEffect(() => {
-    if (!wantsToRefresh) return
+    if (!wantsToRefresh.current) return
 
-    setWantsToRefresh(value => {
-      if (!value || !ModeComponent) return false
+    wantsToRefresh.current = false
+    ;(async () => {
+      if (!ModeComponent) return false
       if (ModeComponent.supportedInput === '6-text') {
         console.log('messages to be written to image', messages)
       } else {
@@ -67,7 +68,7 @@ export default () => {
       setHasError(false)
       if (isReadMode) {
         try {
-          const result = executorHandle.current?.doRead(imageData)
+          const result = await executorHandle.current?.doRead(imageData)
           if (result === 'failed') throw new Error('Failed to read data from image')
           if (Array.isArray(result)) {
             const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
@@ -97,11 +98,11 @@ export default () => {
           const encoder = new TextEncoder()
           if (ModeComponent.supportedInput === '6-text') {
             const encodedMessages = messages.map(message => encoder.encode(message))
-            executorHandle.current?.doWrite(imageData, encodedMessages)
+            await executorHandle.current?.doWrite(imageData, encodedMessages)
             encodedMessages.forEach(message => (currentDataSizeBytes = currentDataSizeBytes + message.length))
           } else {
             const currentDataAsBytes = encoder.encode(singleMessage)
-            executorHandle.current?.doWrite(imageData, currentDataAsBytes)
+            await executorHandle.current?.doWrite(imageData, currentDataAsBytes)
             currentDataSizeBytes = currentDataAsBytes.length
           }
           if (executorHandle.current?.calculatePSNR) {
@@ -114,7 +115,7 @@ export default () => {
           // const encoder = new TextEncoder()
           // const currentDataAsBytes = encoder.encode(singleMessage)
           // currentDataSizeBytes = currentDataAsBytes.length
-          // executorHandle.current?.doWrite(imageData, currentDataAsBytes)
+          // await executorHandle.current?.doWrite(imageData, currentDataAsBytes)
           contextInstance.putImageData(imageData, 0, 0)
         } catch (e) {
           console.error('Failed to write data to image', e)
@@ -134,8 +135,8 @@ export default () => {
         ).toFixed(2)}%`,
       )
       return false
-    })
-  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages, ModeComponent])
+    })()
+  }, [wantsToRefresh.current, selectedModeIndex, singleMessage, messages, ModeComponent])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {
