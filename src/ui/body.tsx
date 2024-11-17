@@ -14,15 +14,13 @@ export default () => {
   const [isReadMode, setReadMode] = useState(false)
   const [wantsToRefresh, setWantsToRefresh] = useState(false)
   const [storageText, setStorageText] = useState('?')
-  const [messages, setMessages] = useState<string[]>(Array(6).fill(''));
-  const [singleMessage, setSingleMessage] = useState('');
+  const [messages, setMessages] = useState<string[]>(Array(6).fill(''))
+  const [singleMessage, setSingleMessage] = useState('')
   const [originalImage, setOriginalFile] = useState<HTMLImageElement | null>(null)
   const [selectedModeIndex, setSelectedModeIndex] = useState(-1)
   const [hasError, setHasError] = useState(false)
-  const [isMultiMessageMode, setIsMultiMessageMode] = useState(false);
 
   const ModeComponent = allModes[selectedModeIndex]
-
 
   const requestRefresh = useCallback(() => {
     setWantsToRefresh(true)
@@ -32,11 +30,11 @@ export default () => {
     if (!wantsToRefresh) return
 
     setWantsToRefresh(value => {
-      if (!value) return false
-      if (isMultiMessageMode){
-        console.log("messages to be written to image", messages);
-      }else{
-        console.log("message to be written to image", singleMessage);
+      if (!value || !ModeComponent) return false
+      if (ModeComponent.supportedInput === '6-text') {
+        console.log('messages to be written to image', messages)
+      } else {
+        console.log('message to be written to image', singleMessage)
       }
       setStorageText('?')
       const canvasInstance = canvas.current
@@ -53,7 +51,7 @@ export default () => {
       contextInstance?.drawImage(originalImage, 0, 0)
 
       if (!executorHandle.current) return false
-      const originalImageData   = contextInstance.getImageData(0, 0, canvasInstance.width, canvasInstance.height, {
+      const originalImageData = contextInstance.getImageData(0, 0, canvasInstance.width, canvasInstance.height, {
         colorSpace: 'srgb',
       })
 
@@ -68,15 +66,15 @@ export default () => {
           const result = executorHandle.current?.doRead(imageData)
           if (result === 'failed') throw new Error('Failed to read data from image')
           if (Array.isArray(result)) {
-            const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-            const decodedMessages = result.map((message) => decoder.decode(message));
-            decodedMessages.forEach((message) => currentDataSizeBytes = currentDataSizeBytes + message.length);
-            setMessages(decodedMessages);
+            const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+            const decodedMessages = result.map(message => decoder.decode(message))
+            decodedMessages.forEach(message => (currentDataSizeBytes = currentDataSizeBytes + message.length))
+            setMessages(decodedMessages)
           } else {
-            const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-            const decodedText = decoder.decode(result);
+            const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+            const decodedText = decoder.decode(result)
             currentDataSizeBytes = result.length
-            setSingleMessage(decodedText);
+            setSingleMessage(decodedText)
           }
           // const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
           // const decodedText = decoder.decode(result)
@@ -88,22 +86,21 @@ export default () => {
         }
       } else {
         try {
-          const encoder = new TextEncoder();
-          if (isMultiMessageMode) {
-            const encodedMessages = messages.map((message) => encoder.encode(message));
-            executorHandle.current?.doWrite(imageData, encodedMessages);
-            encodedMessages.forEach((message) => currentDataSizeBytes = currentDataSizeBytes + message.length);
-
+          const encoder = new TextEncoder()
+          if (ModeComponent.supportedInput === '6-text') {
+            const encodedMessages = messages.map(message => encoder.encode(message))
+            executorHandle.current?.doWrite(imageData, encodedMessages)
+            encodedMessages.forEach(message => (currentDataSizeBytes = currentDataSizeBytes + message.length))
           } else {
-            const currentDataAsBytes = encoder.encode(singleMessage);
-            executorHandle.current?.doWrite(imageData, currentDataAsBytes);
-            currentDataSizeBytes = currentDataAsBytes.length;
+            const currentDataAsBytes = encoder.encode(singleMessage)
+            executorHandle.current?.doWrite(imageData, currentDataAsBytes)
+            currentDataSizeBytes = currentDataAsBytes.length
           }
           if (executorHandle.current?.calculatePSNR) {
-            const psnr = executorHandle.current.calculatePSNR(originalImageData, imageData);
-            console.log(`PSNR: ${psnr.toFixed(2)} dB`);
+            const psnr = executorHandle.current.calculatePSNR(originalImageData, imageData)
+            console.info(`PSNR: ${psnr.toFixed(2)} dB`)
           } else {
-            console.log('calculatePSNR is not implemented.');
+            console.warn('calculatePSNR is not implemented.')
           }
 
           // const encoder = new TextEncoder()
@@ -126,7 +123,7 @@ export default () => {
       )
       return false
     })
-  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages])
+  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages, ModeComponent])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {
@@ -173,9 +170,6 @@ export default () => {
           onChange={i => {
             setSelectedModeIndex(i)
             requestRefresh()
-            console.log("mode", ModeComponent.label);
-            // it should be oposit way?
-            ModeComponent.label === "2-2-4 LSB" ? setIsMultiMessageMode(false) : setIsMultiMessageMode(true)
           }}
         />
 
@@ -190,25 +184,12 @@ export default () => {
         <MessageInputs
           isReadMode={isReadMode}
           requestRefresh={requestRefresh}
-          isMultiMessageMode={isMultiMessageMode}
+          isMultiMessageMode={ModeComponent?.supportedInput === '6-text'}
           onMessagesChange={setMessages}
           onSingleMessageChange={setSingleMessage}
           singleMessage={singleMessage}
           messages={messages}
         />
-
-        {/* <section>
-          <textarea
-            className={hasError ? 'hasError' : undefined}
-            readOnly={isReadMode}
-            cols={10}
-            value={textInput}
-            onChange={e => {
-              setTextInput(e.target.value)
-              requestRefresh()
-            }}
-          />
-        </section> */}
 
         <button onClick={downloadImage}>Download image</button>
       </aside>

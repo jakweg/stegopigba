@@ -5,6 +5,7 @@ import { PixelSkipper } from '../pixel-skipper'
 
 export default {
   label: 'Basic LSB',
+  supportedInput: 'single-text',
   OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
     const [bitsPerChannelCount, setBitsPerChannelCount] = useState(1)
 

@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "target": "ESNext",
     "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true
   },
   "exclude": ["node_modules"]
 }
