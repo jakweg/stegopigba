@@ -15,6 +15,7 @@ export default () => {
   const executorHandle = useRef<ExecutionHandle>(null)
   const [isReadMode, setReadMode] = useState(false)
   const wantsToRefresh = useRef(false)
+  const [refreshCounter, setRefreshCounter] = useState(0)
   const [storageText, setStorageText] = useState('?')
   const [messages, setMessages] = useState<string[]>(Array(6).fill(''))
   const [singleMessage, setSingleMessage] = useState('')
@@ -28,6 +29,7 @@ export default () => {
 
   const requestRefresh = useCallback(() => {
     wantsToRefresh.current = true
+    setRefreshCounter(c => c + 1)
   }, [])
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export default () => {
       )
       return false
     })()
-  }, [wantsToRefresh.current, selectedModeIndex, singleMessage, messages, ModeComponent])
+  }, [refreshCounter, selectedModeIndex, singleMessage, messages, ModeComponent])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {
