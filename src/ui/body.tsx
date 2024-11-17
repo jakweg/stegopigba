@@ -14,8 +14,7 @@ export default () => {
   const [isReadMode, setReadMode] = useState(false)
   const [wantsToRefresh, setWantsToRefresh] = useState(false)
   const [storageText, setStorageText] = useState('?')
-  // const [textInput, setTextInput] = useState('')
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<string[]>(Array(6).fill(''));
   const [singleMessage, setSingleMessage] = useState('');
   const [originalImage, setOriginalFile] = useState<HTMLImageElement | null>(null)
   const [selectedModeIndex, setSelectedModeIndex] = useState(-1)
@@ -36,7 +35,8 @@ export default () => {
       if (!value) return false
       if (isMultiMessageMode){
         console.log("messages to be written to image", messages);
-        return false
+      }else{
+        console.log("message to be written to image", singleMessage);
       }
       setStorageText('?')
       const canvasInstance = canvas.current
@@ -53,6 +53,9 @@ export default () => {
       contextInstance?.drawImage(originalImage, 0, 0)
 
       if (!executorHandle.current) return false
+      const originalImageData   = contextInstance.getImageData(0, 0, canvasInstance.width, canvasInstance.height, {
+        colorSpace: 'srgb',
+      })
 
       const imageData = contextInstance.getImageData(0, 0, canvasInstance.width, canvasInstance.height, {
         colorSpace: 'srgb',
@@ -64,10 +67,20 @@ export default () => {
         try {
           const result = executorHandle.current?.doRead(imageData)
           if (result === 'failed') throw new Error('Failed to read data from image')
-          currentDataSizeBytes = result.length
-          const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
-          const decodedText = decoder.decode(result)
-          setSingleMessage(decodedText)
+          if (Array.isArray(result)) {
+            const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+            const decodedMessages = result.map((message) => decoder.decode(message));
+            decodedMessages.forEach((message) => currentDataSizeBytes = currentDataSizeBytes + message.length);
+            setMessages(decodedMessages);
+          } else {
+            const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+            const decodedText = decoder.decode(result);
+            currentDataSizeBytes = result.length
+            setSingleMessage(decodedText);
+          }
+          // const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+          // const decodedText = decoder.decode(result)
+          // setSingleMessage(decodedText)
         } catch (e) {
           console.error('Failed to get data from image', e)
           setSingleMessage('Failed to read from image')
@@ -75,10 +88,28 @@ export default () => {
         }
       } else {
         try {
-          const encoder = new TextEncoder()
-          const currentDataAsBytes = encoder.encode(singleMessage)
-          currentDataSizeBytes = currentDataAsBytes.length
-          executorHandle.current?.doWrite(imageData, currentDataAsBytes)
+          const encoder = new TextEncoder();
+          if (isMultiMessageMode) {
+            const encodedMessages = messages.map((message) => encoder.encode(message));
+            executorHandle.current?.doWrite(imageData, encodedMessages);
+            encodedMessages.forEach((message) => currentDataSizeBytes = currentDataSizeBytes + message.length);
+
+          } else {
+            const currentDataAsBytes = encoder.encode(singleMessage);
+            executorHandle.current?.doWrite(imageData, currentDataAsBytes);
+            currentDataSizeBytes = currentDataAsBytes.length;
+          }
+          if (executorHandle.current?.calculatePSNR) {
+            const psnr = executorHandle.current.calculatePSNR(originalImageData, imageData);
+            console.log(`PSNR: ${psnr.toFixed(2)} dB`);
+          } else {
+            console.log('calculatePSNR is not implemented.');
+          }
+
+          // const encoder = new TextEncoder()
+          // const currentDataAsBytes = encoder.encode(singleMessage)
+          // currentDataSizeBytes = currentDataAsBytes.length
+          // executorHandle.current?.doWrite(imageData, currentDataAsBytes)
           contextInstance.putImageData(imageData, 0, 0)
         } catch (e) {
           console.error('Failed to write data to image', e)
@@ -95,7 +126,7 @@ export default () => {
       )
       return false
     })
-  }, [wantsToRefresh, selectedModeIndex, singleMessage])
+  }, [wantsToRefresh, selectedModeIndex, singleMessage, messages])
 
   useEffect(() => {
     context.current = canvas.current?.getContext?.('2d', {

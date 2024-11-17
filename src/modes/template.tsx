@@ -1,6 +1,6 @@
 import { RefObject } from 'react'
 
-export type ReadResult = 'failed' | Uint8Array
+export type ReadResult = 'failed' | Uint8Array| Uint8Array[]
 
 export interface ExecutionHandle {
   doWrite(image: ImageData, data: Uint8Array | Array<Uint8Array>): void
@@ -8,6 +8,7 @@ export interface ExecutionHandle {
   doRead(image: ImageData): ReadResult
 
   calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number
+  calculatePSNR?: (originalImage: ImageData, encodedImage: ImageData) => number;
 }
 
 export interface Props {

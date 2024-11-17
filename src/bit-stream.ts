@@ -100,4 +100,8 @@ export class WritableBitStream {
   public isOver(): boolean {
     return this.lastWritePosition >= this.array.length * 8
   }
+
+  public toUint8Array(): Uint8Array {
+    return this.array;
+  }
 }
