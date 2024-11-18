@@ -83,9 +83,6 @@ export default () => {
             currentDataSizeBytes = result.length
             setSingleMessage(decodedText)
           }
-          // const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
-          // const decodedText = decoder.decode(result)
-          // setSingleMessage(decodedText)
         } catch (e) {
           console.error('Failed to get data from image', e)
           if (isMultiMessageMode) {
@@ -110,6 +107,7 @@ export default () => {
           if (executorHandle.current?.calculatePSNR) {
             const psnr = executorHandle.current.calculatePSNR(originalImageData, imageData)
             console.info(`PSNR: ${psnr.toFixed(2)} dB`)
+            setPsnrValue(psnr)
           } else {
             console.warn('calculatePSNR is not implemented.')
           }
