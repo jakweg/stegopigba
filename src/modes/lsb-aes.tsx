@@ -4,35 +4,85 @@ import { ReadableBitStream, WritableBitStream } from '../bit-stream'
 import { PixelSkipper } from '../pixel-skipper'
 import { calculatePSNR } from '../util'
 
-function encryptAES(message, key) {
-  const array = new Uint32Array(16)
-  self.crypto.getRandomValues(array)
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv)
+const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
+  const encoder = new TextEncoder()
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey'])
 
-  let encrypted = cipher.update(message, 'utf8', 'base64')
-  encrypted += cipher.final('base64')
+  const derivedKey = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    {
+      name: 'AES-CBC',
+      length: 256,
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  )
+
+  return derivedKey
+}
+
+export const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string) => {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+
+  const secretKey = await deriveKeyFromPassword(password, salt);
+
+
+  const ciphertext = await crypto.subtle.encrypt(
+    {
+      name: 'AES-CBC',
+      iv,
+    },
+    secretKey,
+    encodedPlaintext
+  );
+
+
+  const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+  const ivBase64 = btoa(String.fromCharCode(...iv));
+  const saltBase64 = btoa(String.fromCharCode(...salt));
 
   return {
-    iv: iv.toString('base64'),
-    encryptedMessage: encrypted,
-  }
-}
+    ciphertext: ciphertextBase64,
+    iv: ivBase64,
+    salt: saltBase64,
+  };
+};
 
-// Funkcja do deszyfrowania wiadomości
-function decryptAES(encryptedMessage, key, iv) {
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'base64'))
 
-  let decrypted = decipher.update(encryptedMessage, 'base64', 'utf8')
-  decrypted += decipher.final('utf8')
+export const decryptSymmetric = async (ciphertext: string, password: string, salt: string, iv: string) => {
+  const encodedCiphertext = new Uint8Array(atob(ciphertext).split('').map(char => char.charCodeAt(0)));
+  const decodedSalt = new Uint8Array(atob(salt).split('').map(char => char.charCodeAt(0)));
+  const decodedIv = new Uint8Array(atob(iv).split('').map(char => char.charCodeAt(0)));
 
-  return decrypted
-}
+
+  const secretKey = await deriveKeyFromPassword(password, decodedSalt);
+
+  const plaintextBuffer = await crypto.subtle.decrypt(
+    {
+      name: 'AES-CBC',
+      iv: decodedIv,
+    },
+    secretKey,
+    encodedCiphertext
+  );
+
+  return plaintextBuffer;
+};
+
 
 export default {
-  supportedInput: "single-text",
+  supportedInput: 'single-text',
   label: 'AES LSB',
   OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
     const [bitsPerChannelCount, setBitsPerChannelCount] = useState(1)
+    const [password, setPassword] = useState('')
 
     useImperativeHandle(
       executor,
@@ -40,18 +90,15 @@ export default {
         calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number {
           return imageWidth * imageHeight * 3 * bitsPerChannelCount
         },
-        doWrite(image: ImageData, data: Uint8Array): void {
-          // const key = crypto.randomBytes(32); // Generowanie klucza AES (256-bitowy)
-          const password = 'my-secret-password'
-          const key = crypto.createHash('sha256').update(password).digest()
-          const plainText = 'Secret message for LSB'
-          const { iv, encryptedMessage } = encryptAES(plainText, key)
-          const combinedMessage = `${iv}:${encryptedMessage}`
+        async doWrite(image: ImageData, data: Uint8Array): Promise<void> {
+          const { ciphertext, iv, salt } = await encryptSymmetric(data, password)
+
+          const combinedMessage = `${iv}:${salt}:${ciphertext}`
           const encoder = new TextEncoder()
           const currentDataAsBytes = encoder.encode(combinedMessage)
 
           const maxCapacity = image.width * image.height * (2 + 2 + 4)
-          const totalBitsNeeded = data.reduce((sum, currentData) => sum + currentDataAsBytes.length * 8, 0)
+          const totalBitsNeeded = currentDataAsBytes.length * 8;
           if (totalBitsNeeded > maxCapacity) {
             throw new Error('You want to encode too much data in this photo.')
           }
@@ -71,7 +118,7 @@ export default {
             }
           }
         },
-        doRead(image: ImageData): ReadResult {
+        async doRead(image: ImageData): Promise<ReadResult> {
           const readStream = ReadableBitStream.createFromUint8Array(image.data, true)
           const length =
             (readStream.getNextByte() << 24) |
@@ -92,21 +139,24 @@ export default {
 
           const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
           const decodedText = decoder.decode(bytes)
-          const [iv, encryptedMessage] = decodedText.split(':')
+          const [iv, salt, encryptedMessage] = decodedText.split(':')
+          if (!iv || !salt || !encryptedMessage) {
+            throw new Error(
+              'Decoded data is incomplete. Ensure IV, salt, and encrypted message are correctly formatted.',
+            )
+          }
           console.log('Extracted IV (Base64):', iv)
+          console.log('Extracted IV (Base64):', salt)
           console.log('Extracted Encrypted Message (Base64):', encryptedMessage)
-          const password = 'my-secret-password'
-          const key = crypto.createHash('sha256').update(password).digest()
-          const decryptedMessage = decryptAES(encryptedMessage, key, iv)
-          console.log('Decrypted message: ', decryptedMessage)
+          const decryptedMessage = await decryptSymmetric(encryptedMessage, password, salt, iv)
 
-          return new Uint8Array(length)
+          return new Uint8Array(decryptedMessage)
         },
         calculatePSNR(originalImage: ImageData, encodedImage: ImageData): number {
           return calculatePSNR(originalImage, encodedImage)
         },
       }),
-      [bitsPerChannelCount],
+      [bitsPerChannelCount, password],
     )
 
     return (
@@ -124,6 +174,16 @@ export default {
             }}
           />
           {bitsPerChannelCount}
+        </label>
+        <label>
+          Password to {isReadMode ? "Decrypt" : "Encrypt"} your data:
+          <input
+            type="text"
+            onChange={e => {
+              setPassword(e.target.value)
+              requestRefresh()
+            }}
+          />
         </label>
       </section>
     )
