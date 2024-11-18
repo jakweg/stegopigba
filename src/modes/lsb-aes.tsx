@@ -1,7 +1,6 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { PixelSkipper } from '../pixel-skipper'
 import { calculatePSNR } from '../util'
 
 const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
@@ -27,7 +26,7 @@ const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
   return derivedKey
 }
 
-export const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string) => {
+const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string) => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(16));
 
@@ -56,7 +55,7 @@ export const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: s
 };
 
 
-export const decryptSymmetric = async (ciphertext: string, password: string, salt: string, iv: string) => {
+const decryptSymmetric = async (ciphertext: string, password: string, salt: string, iv: string) => {
   const encodedCiphertext = new Uint8Array(atob(ciphertext).split('').map(char => char.charCodeAt(0)));
   const decodedSalt = new Uint8Array(atob(salt).split('').map(char => char.charCodeAt(0)));
   const decodedIv = new Uint8Array(atob(iv).split('').map(char => char.charCodeAt(0)));
