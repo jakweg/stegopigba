@@ -2,7 +2,6 @@ import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
 import { calculatePSNR } from '../util'
-import { fromByteArray, toByteArray } from 'base64-js';
 
 const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
   const encoder = new TextEncoder()
