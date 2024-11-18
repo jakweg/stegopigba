@@ -2,6 +2,7 @@ import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
 import { calculatePSNR } from '../util'
+import { fromByteArray, toByteArray } from 'base64-js';
 
 const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
   const encoder = new TextEncoder()
@@ -26,12 +27,11 @@ const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
   return derivedKey
 }
 
-const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string) => {
+const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string): Promise<Uint8Array> => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(16));
 
   const secretKey = await deriveKeyFromPassword(password, salt);
-
 
   const ciphertext = await crypto.subtle.encrypt(
     {
@@ -42,38 +42,35 @@ const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string) 
     encodedPlaintext
   );
 
+  const combinedMessage = new Uint8Array(iv.length + salt.length + ciphertext.byteLength);
+  combinedMessage.set(iv, 0); // First 16 bytes is IV
+  combinedMessage.set(salt, iv.length); // Next 16 bytes is salt
+  combinedMessage.set(new Uint8Array(ciphertext), iv.length + salt.length); // Rest is cyphertext
 
-  const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
-  const ivBase64 = btoa(String.fromCharCode(...iv));
-  const saltBase64 = btoa(String.fromCharCode(...salt));
-
-  return {
-    ciphertext: ciphertextBase64,
-    iv: ivBase64,
-    salt: saltBase64,
-  };
+  return combinedMessage;
 };
 
 
-const decryptSymmetric = async (ciphertext: string, password: string, salt: string, iv: string) => {
-  const encodedCiphertext = new Uint8Array(atob(ciphertext).split('').map(char => char.charCodeAt(0)));
-  const decodedSalt = new Uint8Array(atob(salt).split('').map(char => char.charCodeAt(0)));
-  const decodedIv = new Uint8Array(atob(iv).split('').map(char => char.charCodeAt(0)));
 
+const decryptSymmetric = async (combinedMessage: Uint8Array, password: string): Promise<Uint8Array> => {
+  const iv = combinedMessage.slice(0, 16);
+  const salt = combinedMessage.slice(16, 32);
+  const ciphertext = combinedMessage.slice(32);
 
-  const secretKey = await deriveKeyFromPassword(password, decodedSalt);
+  const secretKey = await deriveKeyFromPassword(password, salt);
 
   const plaintextBuffer = await crypto.subtle.decrypt(
     {
       name: 'AES-CBC',
-      iv: decodedIv,
+      iv,
     },
     secretKey,
-    encodedCiphertext
+    ciphertext
   );
 
-  return plaintextBuffer;
-};
+  return new Uint8Array(plaintextBuffer);
+}
+
 
 
 export default {
@@ -90,24 +87,20 @@ export default {
           return imageWidth * imageHeight * 3 * bitsPerChannelCount
         },
         async doWrite(image: ImageData, data: Uint8Array): Promise<void> {
-          const { ciphertext, iv, salt } = await encryptSymmetric(data, password)
+          const combinedMessage = await encryptSymmetric(data, password)
 
-          const combinedMessage = `${iv}:${salt}:${ciphertext}`
-          const encoder = new TextEncoder()
-          const currentDataAsBytes = encoder.encode(combinedMessage)
-
-          const maxCapacity = image.width * image.height * (2 + 2 + 4)
-          const totalBitsNeeded = currentDataAsBytes.length * 8;
+          const maxCapacity = image.width * image.height * 3 * bitsPerChannelCount;
+          const totalBitsNeeded = combinedMessage.length * 8;
           if (totalBitsNeeded > maxCapacity) {
             throw new Error('You want to encode too much data in this photo.')
           }
 
-          const readStream = ReadableBitStream.createFromUint8Array(currentDataAsBytes, false)
+          const readStream = ReadableBitStream.createFromUint8Array(combinedMessage, false)
           const writeStream = WritableBitStream.createFromUint8Array(image.data, true)
-          writeStream.putByte((currentDataAsBytes.length >> 24) & 0xff)
-          writeStream.putByte((currentDataAsBytes.length >> 16) & 0xff)
-          writeStream.putByte((currentDataAsBytes.length >> 8) & 0xff)
-          writeStream.putByte((currentDataAsBytes.length >> 0) & 0xff)
+          writeStream.putByte((combinedMessage.length >> 24) & 0xff)
+          writeStream.putByte((combinedMessage.length >> 16) & 0xff)
+          writeStream.putByte((combinedMessage.length >> 8) & 0xff)
+          writeStream.putByte((combinedMessage.length >> 0) & 0xff)
           while (true) {
             if (readStream.isOver() || writeStream.isOver()) break
 
@@ -125,8 +118,8 @@ export default {
             (readStream.getNextByte() << 8) |
             (readStream.getNextByte() << 0)
           if (length < 0 || length > 1_000_000) throw new Error('Attempt to create array of length ' + length + 'b')
-          const bytes = new Uint8Array(length)
-          const writeStream = WritableBitStream.createFromUint8Array(bytes, false)
+          const messageBytes = new Uint8Array(length)
+          const writeStream = WritableBitStream.createFromUint8Array(messageBytes, false)
           while (true) {
             if (writeStream.isOver()) break
             readStream.skipNextBits(8 - bitsPerChannelCount)
@@ -135,19 +128,7 @@ export default {
               writeStream.putBit(bit)
             }
           }
-
-          const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
-          const decodedText = decoder.decode(bytes)
-          const [iv, salt, encryptedMessage] = decodedText.split(':')
-          if (!iv || !salt || !encryptedMessage) {
-            throw new Error(
-              'Decoded data is incomplete. Ensure IV, salt, and encrypted message are correctly formatted.',
-            )
-          }
-          console.log('Extracted IV (Base64):', iv)
-          console.log('Extracted IV (Base64):', salt)
-          console.log('Extracted Encrypted Message (Base64):', encryptedMessage)
-          const decryptedMessage = await decryptSymmetric(encryptedMessage, password, salt, iv)
+          const decryptedMessage = await decryptSymmetric(messageBytes, password)
 
           return new Uint8Array(decryptedMessage)
         },
