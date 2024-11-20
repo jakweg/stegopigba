@@ -185,7 +185,8 @@ export default {
         
           const messageBytes = new Uint8Array(length)
           const writeStream = WritableBitStream.createFromUint8Array(messageBytes, false)
-          while (writeStream.isOver()) {
+          while (true) {
+            if (writeStream.isOver()) break
             readStream.skipNextBits(8 - 2)
             for (let i = 0; i < 2; ++i) {
               const bit = readStream.getNextBit()
