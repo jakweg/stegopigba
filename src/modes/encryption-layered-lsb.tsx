@@ -2,7 +2,6 @@ import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
 import { calculatePSNR } from '../util'
-import { log } from 'console';
 
 
 function caesarEncryptWithCustomAlphabet(text, shift, alphabet) {
@@ -140,11 +139,8 @@ export default {
           const shift = 3;
           const encryptedByCaesar = caesarEncryptWithCustomAlphabet(plaintextMessage, shift, alphabet);
           const encryptedByRailFence = encryptRailFence(encryptedByCaesar, 3)
-          console.log(" alphabet", alphabet)
-          console.log(" message v1", encryptedByRailFence)
           const message = `${alphabet}:${encryptedByRailFence}`;
           const messageB64Encoded = btoa(message)
-          console.log("message", messageB64Encoded)
           const currentDataAsBytes = encoder.encode(messageB64Encoded)
 
           const maxCapacity = image.width * image.height * 3 * 2;
@@ -195,12 +191,9 @@ export default {
           }
           const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }) 
           const base64Message = decoder.decode(messageBytes)
-          console.log("message",messageBytes)
-          console.log("base64",base64Message)
           
           const plaintextMessage = atob(base64Message)
           const [alphabet, encryptedMessage] = plaintextMessage.split(":")
-          console.log(alphabet)
 
 
           const decryptedByRailFence = decryptRailFence(encryptedMessage, 3)
