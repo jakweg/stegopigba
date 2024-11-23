@@ -5,7 +5,7 @@ import { PixelSkipper } from '../util/pixel-skipper'
 import { calculatePSNR } from '../util/generic'
 
 export default {
-  label: 'Basic LSB',
+  label: 'Randomized LSB',
   supportedInput: 'single-text',
   OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
     const [bitsPerChannelCount, setBitsPerChannelCount] = useState(1)
