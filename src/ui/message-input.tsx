@@ -1,7 +1,7 @@
-
 import React from 'react'
 
 interface MessageInputsProps {
+  hasError: boolean
   isReadMode: boolean
   requestRefresh: () => void
   isMultiMessageMode: boolean
@@ -12,6 +12,7 @@ interface MessageInputsProps {
 }
 
 export default function MessageInputs({
+  hasError,
   isReadMode,
   requestRefresh,
   isMultiMessageMode,
@@ -37,6 +38,7 @@ export default function MessageInputs({
       {isMultiMessageMode ? (
         messages.map((message, index) => (
           <textarea
+            className={hasError ? 'hasError' : undefined}
             key={index}
             readOnly={isReadMode}
             cols={10}
@@ -47,6 +49,7 @@ export default function MessageInputs({
         ))
       ) : (
         <textarea
+          className={hasError ? 'hasError' : undefined}
           readOnly={isReadMode}
           cols={40}
           value={singleMessage}

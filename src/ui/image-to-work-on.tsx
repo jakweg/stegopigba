@@ -1,5 +1,5 @@
 import React from 'react'
-import { loadImage, readFileDataUrl } from '../util'
+import { loadImage, readFileDataUrl } from '../util/generic'
 
 interface Props {
   setImage: (file: HTMLImageElement | null) => void

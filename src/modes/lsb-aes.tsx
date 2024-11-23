@@ -1,7 +1,7 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { calculatePSNR } from '../util'
+import { calculatePSNR } from '../util/generic'
 
 const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
   const encoder = new TextEncoder()
@@ -27,10 +27,10 @@ const deriveKeyFromPassword = async (password: string, salt: Uint8Array) => {
 }
 
 const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string): Promise<Uint8Array> => {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(16))
 
-  const secretKey = await deriveKeyFromPassword(password, salt);
+  const secretKey = await deriveKeyFromPassword(password, salt)
 
   const ciphertext = await crypto.subtle.encrypt(
     {
@@ -38,25 +38,23 @@ const encryptSymmetric = async (encodedPlaintext: Uint8Array, password: string):
       iv,
     },
     secretKey,
-    encodedPlaintext
-  );
+    encodedPlaintext,
+  )
 
-  const combinedMessage = new Uint8Array(iv.length + salt.length + ciphertext.byteLength);
-  combinedMessage.set(iv, 0); // First 16 bytes is IV
-  combinedMessage.set(salt, iv.length); // Next 16 bytes is salt
-  combinedMessage.set(new Uint8Array(ciphertext), iv.length + salt.length); // Rest is cyphertext
+  const combinedMessage = new Uint8Array(iv.length + salt.length + ciphertext.byteLength)
+  combinedMessage.set(iv, 0) // First 16 bytes is IV
+  combinedMessage.set(salt, iv.length) // Next 16 bytes is salt
+  combinedMessage.set(new Uint8Array(ciphertext), iv.length + salt.length) // Rest is cyphertext
 
-  return combinedMessage;
-};
-
-
+  return combinedMessage
+}
 
 const decryptSymmetric = async (combinedMessage: Uint8Array, password: string): Promise<Uint8Array> => {
-  const iv = combinedMessage.slice(0, 16);
-  const salt = combinedMessage.slice(16, 32);
-  const ciphertext = combinedMessage.slice(32);
+  const iv = combinedMessage.slice(0, 16)
+  const salt = combinedMessage.slice(16, 32)
+  const ciphertext = combinedMessage.slice(32)
 
-  const secretKey = await deriveKeyFromPassword(password, salt);
+  const secretKey = await deriveKeyFromPassword(password, salt)
 
   const plaintextBuffer = await crypto.subtle.decrypt(
     {
@@ -64,13 +62,11 @@ const decryptSymmetric = async (combinedMessage: Uint8Array, password: string): 
       iv,
     },
     secretKey,
-    ciphertext
-  );
+    ciphertext,
+  )
 
-  return new Uint8Array(plaintextBuffer);
+  return new Uint8Array(plaintextBuffer)
 }
-
-
 
 export default {
   supportedInput: 'single-text',
@@ -88,8 +84,8 @@ export default {
         async doWrite(image: ImageData, data: Uint8Array): Promise<void> {
           const combinedMessage = await encryptSymmetric(data, password)
 
-          const maxCapacity = image.width * image.height * 3 * bitsPerChannelCount;
-          const totalBitsNeeded = combinedMessage.length * 8;
+          const maxCapacity = image.width * image.height * 3 * bitsPerChannelCount
+          const totalBitsNeeded = combinedMessage.length * 8
           if (totalBitsNeeded > maxCapacity) {
             throw new Error('You want to encode too much data in this photo.')
           }
@@ -155,7 +151,7 @@ export default {
           {bitsPerChannelCount}
         </label>
         <label>
-          Password to {isReadMode ? "Decrypt" : "Encrypt"} your data:
+          Password to {isReadMode ? 'Decrypt' : 'Encrypt'} your data:
           <input
             type="text"
             onChange={e => {

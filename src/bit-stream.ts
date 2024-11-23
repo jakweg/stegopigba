@@ -71,14 +71,13 @@ export class WritableBitStream {
     const bitInByteIndex = (7 - (this.lastWritePosition % 8)) | 0
     const bitInByteIndexAsShift = 1 << bitInByteIndex
 
-    const entireByteBeforeChange = this.array[byteIndex]
+    const entireByteBeforeChange = this.array[byteIndex]!
     const entireByteWithoutBit = entireByteBeforeChange & ~bitInByteIndexAsShift
     const entireByteAfterChange = entireByteWithoutBit | ((bit & 0b1) << bitInByteIndex)
 
     this.array[byteIndex] = entireByteAfterChange
 
     this.lastWritePosition++
-    // console.log('write done', 1)
   }
 
   private moveToNextUnskipableBit() {
@@ -94,23 +93,17 @@ export class WritableBitStream {
   public skipNextBits(count: number): void {
     this.moveToNextUnskipableBit()
     this.lastWritePosition += count
-    // console.log('write skip', count)
   }
 
   public isOver(): boolean {
     return this.lastWritePosition >= this.array.length * 8
   }
 
-
   public getLastWritePosition(): number {
     return this.lastWritePosition
   }
 
   public getArray(): Uint8Array {
-    return this.array;
-  }
-
-  public toUint8Array(): Uint8Array {
-    return this.array;
+    return this.array
   }
 }

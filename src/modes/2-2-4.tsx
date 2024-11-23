@@ -1,13 +1,12 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { calculatePSNR } from '../util'
+import { calculatePSNR } from '../util/generic'
 
 export default {
   label: '2-2-4 LSB',
   supportedInput: '6-text',
   OptionsComponent: ({ isReadMode, executor }) => {
-    const [isLoading, setIsLoading] = useState(false)
     useImperativeHandle(executor, () => ({
       calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number {
         return imageWidth * imageHeight * (2 + 2 + 4)
@@ -88,28 +87,7 @@ export default {
             howManyBits = (howManyBits + 1) % 3
           }
         }
-        // const bytes = new Uint8Array(length)
-        // const writeStream = WritableBitStream.createFromUint8Array(bytes, false)
-        // while (true) {
-        //   if (writeStream.isOver()) break
-
-        //   readStream.skipNextBits(8 - 2)
-        //   for (let i = 0; i < 2; ++i) {
-        //     const bit = readStream.getNextBit()
-        //     writeStream.putBit(bit)
-        //   }
-        //   readStream.skipNextBits(8 - 2)
-        //   for (let i = 0; i < 2; ++i) {
-        //     const bit = readStream.getNextBit()
-        //     writeStream.putBit(bit)
-        //   }
-        //   readStream.skipNextBits(8 - 4)
-        //   for (let i = 0; i < 4; ++i) {
-        //     const bit = readStream.getNextBit()
-        //     writeStream.putBit(bit)
-        //   }
-        // }
-        return writableStreams.map(stream => stream.toUint8Array())
+        return writableStreams.map(stream => stream.getArray())
       },
       calculatePSNR(originalImage: ImageData, encodedImage: ImageData): number {
         return calculatePSNR(originalImage, encodedImage)

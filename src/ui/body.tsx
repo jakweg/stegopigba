@@ -3,10 +3,8 @@ import ImageToWorkOn from './image-to-work-on'
 import allModes from '../modes/all-modes'
 import { ExecutionHandle } from '../modes/template'
 import ModePicker from './mode-picker'
-import { downloadCanvasToPng } from '../util'
+import { downloadCanvasToPng } from '../util/generic'
 import MessageInputs from './message-input'
-// import lsbAes from '../modes/lsb-aes'
-// import { log } from 'console'
 
 export default () => {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -38,13 +36,7 @@ export default () => {
     wantsToRefresh.current = false
     ;(async () => {
       if (!ModeComponent) return false
-      if (ModeComponent.supportedInput === '6-text') {
-        console.log('messages to be written to image', messages)
-      } else {
-        console.log('message to be written to image', singleMessage)
-      }
 
-      setStorageText('?')
       const canvasInstance = canvas.current
       if (!canvasInstance) return false
       if (!originalImage) return false
@@ -112,10 +104,6 @@ export default () => {
             console.warn('calculatePSNR is not implemented.')
           }
 
-          // const encoder = new TextEncoder()
-          // const currentDataAsBytes = encoder.encode(singleMessage)
-          // currentDataSizeBytes = currentDataAsBytes.length
-          // await executorHandle.current?.doWrite(imageData, currentDataAsBytes)
           contextInstance.putImageData(imageData, 0, 0)
         } catch (e) {
           console.error('Failed to write data to image', e)
@@ -126,14 +114,15 @@ export default () => {
           }
           setHasError(true)
         }
+
+        setStorageText(
+          `Data takes ${currentDataSizeBytes}B out of ${totalCapacityBits}B which is ${(
+            ((currentDataSizeBytes * 8) / totalCapacityBits) *
+            100
+          ).toFixed(2)}%`,
+        )
       }
 
-      setStorageText(
-        `Data takes ${currentDataSizeBytes}B out of ${totalCapacityBits}B which is ${(
-          ((currentDataSizeBytes * 8) / totalCapacityBits) *
-          100
-        ).toFixed(2)}%`,
-      )
       return false
     })()
   }, [refreshCounter, selectedModeIndex, singleMessage, messages, ModeComponent])
@@ -198,6 +187,7 @@ export default () => {
         )}
 
         <MessageInputs
+          hasError={hasError}
           isReadMode={isReadMode}
           requestRefresh={requestRefresh}
           isMultiMessageMode={ModeComponent?.supportedInput === '6-text'}
