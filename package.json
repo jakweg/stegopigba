@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "esbuild --jsx=automatic --sourcemap=inline --bundle src/index.tsx --outfile=public/bundle.js --servedir=public",
+    "start": "esbuild --jsx=automatic --sourcemap=inline --bundle src/index.tsx --outfile=public/bundle.js --servedir=public --serve=8001",
     "build:prod": "rm -rf dist && esbuild --jsx=automatic --bundle src/index.tsx --outfile=dist/bundle.js --minify && minify public/index.html > dist/index.html && cp public/manifest*.json dist/ && cp -r public/icon dist/icon && workbox generateSW workbox-config.json"
   },
   "private": true,
@@ -13,6 +13,7 @@
     "workbox-cli": "^7.1.0"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
     "@types/react-dom": "^18.3.1"
   }
 }

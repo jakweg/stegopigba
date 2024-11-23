@@ -1,10 +1,12 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { PixelSkipper } from '../pixel-skipper'
+import { PixelSkipper } from '../util/pixel-skipper'
+import { calculatePSNR } from '../util/generic'
 
 export default {
   label: 'Basic LSB',
+  supportedInput: 'single-text',
   OptionsComponent: ({ isReadMode, executor, requestRefresh }) => {
     const [bitsPerChannelCount, setBitsPerChannelCount] = useState(1)
 
@@ -78,6 +80,9 @@ export default {
           }
 
           return bytes
+        },
+        calculatePSNR(originalImage: ImageData, encodedImage: ImageData): number {
+          return calculatePSNR(originalImage, encodedImage)
         },
       }),
       [bitsPerChannelCount],
