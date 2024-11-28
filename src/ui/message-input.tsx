@@ -38,6 +38,7 @@ export default function MessageInputs({
       {isMultiMessageMode ? (
         messages.map((message, index) => (
           <textarea
+            rows={10}
             className={hasError ? 'hasError' : undefined}
             key={index}
             readOnly={isReadMode}
@@ -49,6 +50,7 @@ export default function MessageInputs({
         ))
       ) : (
         <textarea
+          rows={10}
           className={hasError ? 'hasError' : undefined}
           readOnly={isReadMode}
           cols={40}

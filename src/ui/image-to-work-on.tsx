@@ -20,7 +20,7 @@ export default ({ setImage }: Props) => {
   return (
     <section>
       <h2>Image to work on:</h2>
-      <input type="file" onChange={onChange} />
+      <input type="file" accept="image/*" onChange={onChange} />
     </section>
   )
 }

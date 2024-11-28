@@ -9,7 +9,7 @@ export interface ExecutionHandle {
 
   doRead(image: ImageData): Promise<ReadResult> | ReadResult
 
-  calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number): number
+  calculateMaxStorageCapacityBits(imageWidth: number, imageHeight: number, data: Uint8ClampedArray): number
 
   calculatePSNR?: (originalImage: ImageData, encodedImage: ImageData) => number
 }
