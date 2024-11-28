@@ -1,8 +1,8 @@
 import React, { useImperativeHandle, useState } from 'react'
 import { Mode, ReadResult } from './template'
 import { ReadableBitStream, WritableBitStream } from '../bit-stream'
-import { PixelSkipper } from '../pixel-skipper'
-import { calculatePSNR } from '../util'
+import { calculatePSNR } from '../util/generic'
+import { PixelSkipper } from '../util/pixel-skipper'
 
 export default {
   label: 'Various Bits',

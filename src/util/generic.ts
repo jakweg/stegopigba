@@ -55,27 +55,38 @@ export function downloadCanvasToPng(canvas: HTMLCanvasElement, name: string) {
 }
 
 export function calculateMSE(originalImage: ImageData, encodedImage: ImageData): number {
-  const originalPixels = originalImage.data;
-  const encodedPixels = encodedImage.data;
+  const originalPixels = originalImage.data
+  const encodedPixels = encodedImage.data
 
-  let mse = 0;
-  const totalPixels = originalImage.width * originalImage.height;
+  let mse = 0
+  const totalPixels = originalImage.width * originalImage.height
 
   for (let i = 0; i < totalPixels * 4; i += 4) {
     for (let channel = 0; channel < 3; channel++) {
-      const diff = originalPixels[i + channel] - encodedPixels[i + channel];
-      mse += diff ** 2;
+      const diff = originalPixels[i + channel]! - encodedPixels[i + channel]!
+      mse += diff ** 2
     }
   }
 
-  mse /= totalPixels * 3;
-  return mse;
+  mse /= totalPixels * 3
+  return mse
 }
 
 export function calculatePSNR(originalImage: ImageData, encodedImage: ImageData): number {
-  const MAX_I = 255;
-  const mse = calculateMSE(originalImage, encodedImage);
+  const MAX_I = 255
+  const mse = calculateMSE(originalImage, encodedImage)
 
-  if (mse === 0) return Infinity;
-  return 20 * Math.log10(MAX_I / Math.sqrt(mse));
+  if (mse === 0) return Infinity
+  return 20 * Math.log10(MAX_I / Math.sqrt(mse))
+}
+
+export function putNumberInFrontOfArray(array: Uint8Array, value: number): Uint8Array {
+  const tmp = new Uint8Array(array.length + 4)
+  tmp.set(array, 4)
+  tmp[0] = (value >> 24) & 0xff
+  tmp[1] = (value >> 16) & 0xff
+  tmp[2] = (value >> 8) & 0xff
+  tmp[3] = (value >> 0) & 0xff
+
+  return tmp
 }

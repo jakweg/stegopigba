@@ -21,7 +21,7 @@ export class ReadableBitStream {
     const byteIndex = (this.lastReadPosition / 8) | 0
     const bitInByteIndex = (7 - (this.lastReadPosition % 8)) | 0
 
-    const entireByte = this.array[byteIndex]
+    const entireByte = this.array[byteIndex]!
     const justTheBit = (entireByte >> bitInByteIndex) & 0b01
 
     this.lastReadPosition++

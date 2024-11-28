@@ -45,8 +45,6 @@ export default () => {
       canvasInstance.height = originalImage.height
 
       let currentDataSizeBytes = 0
-      const totalCapacityBits =
-        executorHandle.current?.calculateMaxStorageCapacityBits(canvasInstance.width, canvasInstance.height) ?? 1
 
       contextInstance?.drawImage(originalImage, 0, 0)
       if (!executorHandle.current) return false
@@ -57,6 +55,12 @@ export default () => {
       const imageData = contextInstance.getImageData(0, 0, canvasInstance.width, canvasInstance.height, {
         colorSpace: 'srgb',
       })
+      const totalCapacityBits =
+        executorHandle.current?.calculateMaxStorageCapacityBits(
+          canvasInstance.width,
+          canvasInstance.height,
+          imageData.data,
+        ) ?? 1
       if (!imageData) return false
 
       setHasError(false)
@@ -80,6 +84,10 @@ export default () => {
           if (isMultiMessageMode) {
             setMessages(Array(6).fill('Failed to write data to image'))
           } else {
+            // const lastData = JSON.parse(localStorage.getItem('last saved data') ?? '[]')
+            // const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+            // const decodedText = decoder.decode(new Uint8Array(lastData))
+            // setSingleMessage(decodedText)
             setSingleMessage('Failed to read from image')
           }
           setHasError(true)
@@ -93,6 +101,7 @@ export default () => {
             encodedMessages.forEach(message => (currentDataSizeBytes = currentDataSizeBytes + message.length))
           } else {
             const currentDataAsBytes = encoder.encode(singleMessage)
+            localStorage.setItem('last saved data', JSON.stringify([...currentDataAsBytes]))
             await executorHandle.current?.doWrite(imageData, currentDataAsBytes)
             currentDataSizeBytes = currentDataAsBytes.length
           }
